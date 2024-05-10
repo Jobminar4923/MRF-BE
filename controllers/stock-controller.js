@@ -112,6 +112,11 @@ export const updateOpenStock = async (req, res) => {
       pricePerUnit,
       location,
     } = req.body;
+    const { role } = req.user;
+
+    if (!["owner", "worker"].includes(role)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
 
     // Find open-stock record with the same tyreSize and date
     let stock = await Stock.findOne({ date, tyreSize, status: "open-stock" });
@@ -163,19 +168,9 @@ export const recordSale = async (req, res) => {
     // Parse the date or use the current date if not provided
     const currentDate = date ? new Date(date) : new Date();
 
-    // Convert the date to UTC format
-    const utcDate = new Date(
-      currentDate.getUTCFullYear(),
-      currentDate.getUTCMonth(),
-      currentDate.getUTCDate(),
-      0,
-      0,
-      0,
-    );
-
     // Check if the item exists in the stock for the given tyreSize
     let stock = await Stock.findOne({
-      date: utcDate.toISOString().split("T")[0],
+      date: currentDate.toISOString().split("T")[0],
       tyreSize,
     });
 
@@ -191,9 +186,21 @@ export const recordSale = async (req, res) => {
       return res.status(400).json({ message: "Insufficient stock quantity" });
     }
 
+    // Update the existing-stock record if it exists
+    const existingStock = await Stock.findOne({
+      date: currentDate.toISOString().split("T")[0],
+      status: "existing-stock",
+      tyreSize,
+    });
+    if (existingStock) {
+      existingStock.quantity -= quantity;
+      existingStock.totalAmount -= totalAmount;
+      await existingStock.save();
+    }
+
     // Create a new sales record
     const newSale = new Sales({
-      date: utcDate,
+      date: currentDate,
       quantity,
       totalAmount,
       customerName,
@@ -210,7 +217,7 @@ export const recordSale = async (req, res) => {
     if (stock.status === "open-stock") {
       // Update the open-stock record to existing-stock if it exists
       const existingOpenStock = await Stock.findOne({
-        date: utcDate.toISOString().split("T")[0],
+        date: currentDate.toISOString().split("T")[0],
         status: "open-stock",
         tyreSize,
       });
