@@ -88,7 +88,6 @@ export const addStock = async (req, res) => {
       totalAmount: quantity * pricePerUnit,
       profit,
       tyreSize,
-      user: userId,
     });
     await newSale.save();
 
