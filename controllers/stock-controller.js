@@ -160,13 +160,18 @@ export const recordSale = async (req, res) => {
     } = req.body;
     const { role, id: userId } = req.user;
 
+    console.log("Request Body:", req.body);
+    console.log("User Role:", role);
+
     // Check if the user has the owner or worker role
     if (!["owner", "worker"].includes(role)) {
+      console.log("Forbidden: User role is not owner or worker");
       return res.status(403).json({ message: "Forbidden" });
     }
 
     // Parse the date or use the current date if not provided
     const currentDate = date ? new Date(date) : new Date();
+    console.log("Current Date:", currentDate);
 
     // Check if the item exists in the stock for the given tyreSize
     let stock = await Stock.findOne({
@@ -174,15 +179,21 @@ export const recordSale = async (req, res) => {
       tyreSize,
     });
 
+    console.log("Stock:", stock);
+
     if (!stock) {
+      console.log("Item not found in stock");
       return res.status(404).json({ message: "Item not found in stock" });
     }
 
     // Calculate the total amount based on quantity and price per unit
     const totalAmount = quantity * pricePerUnit;
 
+    console.log("Total Amount:", totalAmount);
+
     // Check if the requested quantity is available in existing stock
     if (stock.status === "existing-stock" && stock.quantity < quantity) {
+      console.log("Insufficient stock quantity");
       return res.status(400).json({ message: "Insufficient stock quantity" });
     }
 
@@ -196,6 +207,7 @@ export const recordSale = async (req, res) => {
       existingStock.quantity -= quantity;
       existingStock.totalAmount -= totalAmount;
       await existingStock.save();
+      console.log("Existing Stock Updated:", existingStock);
     }
 
     // Create a new sales record
@@ -209,6 +221,8 @@ export const recordSale = async (req, res) => {
       tyreSize,
       user: userId,
     });
+
+    console.log("New Sale Record:", newSale);
 
     // Save the sales record
     await newSale.save();
@@ -225,6 +239,7 @@ export const recordSale = async (req, res) => {
       if (existingOpenStock) {
         existingOpenStock.status = "existing-stock";
         await existingOpenStock.save();
+        console.log("Existing Open Stock Updated:", existingOpenStock);
       }
 
       // If an openStockDay record already exists for the same date, do not create a new record
@@ -246,12 +261,15 @@ export const recordSale = async (req, res) => {
           location: stock.location,
         });
         await openStockDay.save();
+        console.log("New Open Stock Day Record:", openStockDay);
       }
     }
 
     // Subtract quantity from stock and update total amount
     stock.quantity -= quantity;
     stock.totalAmount += totalAmount;
+
+    console.log("Updated Stock:", stock);
 
     // Save the updated stock
     await stock.save();
