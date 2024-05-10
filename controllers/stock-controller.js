@@ -167,17 +167,20 @@ export const recordSale = async (req, res) => {
 
     // Parse the date or use the current date if not provided
     const currentDate = date ? new Date(date) : new Date();
-    const formattedDate = new Date(
-      Date.UTC(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        currentDate.getDate(),
-      ),
+
+    // Convert the date to UTC format
+    const utcDate = new Date(
+      currentDate.getUTCFullYear(),
+      currentDate.getUTCMonth(),
+      currentDate.getUTCDate(),
+      0,
+      0,
+      0,
     );
 
     // Check if the item exists in the stock for the given tyreSize
     let stock = await Stock.findOne({
-      date: formattedDate.toISOString().split("T")[0],
+      date: utcDate.toISOString().split("T")[0],
       tyreSize,
     });
 
@@ -195,7 +198,7 @@ export const recordSale = async (req, res) => {
 
     // Create a new sales record
     const newSale = new Sales({
-      date: formattedDate,
+      date: utcDate,
       quantity,
       totalAmount,
       customerName,
@@ -212,7 +215,7 @@ export const recordSale = async (req, res) => {
     if (stock.status === "open-stock") {
       // Update the open-stock record to existing-stock if it exists
       const existingOpenStock = await Stock.findOne({
-        date: formattedDate.toISOString().split("T")[0],
+        date: utcDate.toISOString().split("T")[0],
         status: "open-stock",
         tyreSize,
       });
