@@ -76,6 +76,19 @@ export const addStock = async (req, res) => {
           location,
         });
         await newStock.save();
+      } else {
+        // If the added record is the first one of that date, create a separate record as open-stock
+        const newOpenStock = new Stock({
+          date,
+          status: "open-stock",
+          quantity,
+          tyreSize,
+          SSP,
+          totalAmount,
+          pricePerUnit,
+          location,
+        });
+        await newOpenStock.save();
       }
     }
 
@@ -194,7 +207,31 @@ export const recordSale = async (req, res) => {
 
     if (!stock) {
       console.log("Item not found in stock");
-      return res.status(404).json({ message: "Item not found in stock" });
+
+      // Check if there is existing stock with the same tyreSize and open-stock status
+      const openStock = await Stock.findOne({
+        date: currentDate.toISOString().split("T")[0],
+        tyreSize,
+        status: "open-stock",
+      });
+
+      if (openStock) {
+        // Create a new record for existing-stock
+        stock = new Stock({
+          date: currentDate,
+          status: "existing-stock",
+          quantity: openStock.quantity,
+          tyreSize: openStock.tyreSize,
+          SSP: openStock.SSP,
+          totalAmount: openStock.totalAmount,
+          pricePerUnit: openStock.pricePerUnit,
+          location: openStock.location,
+        });
+        await stock.save();
+        console.log("New Stock Record:", stock);
+      } else {
+        return res.status(404).json({ message: "Item not found in stock" });
+      }
     }
 
     // Calculate the total amount based on quantity and price per unit
@@ -320,8 +357,20 @@ export const getOpenStock = async (req, res) => {
 
 export const getExistingStock = async (req, res) => {
   try {
-    // Find all "existing-stock" records
-    const existingStock = await Stock.find({ status: "existing-stock" });
+    // Find all "existing-stock" records for the current date
+    const currentDate = new Date().toISOString().split("T")[0];
+    let existingStock = await Stock.find({
+      date: currentDate,
+      status: "existing-stock",
+    });
+
+    // If there are no existing-stock records for the current date, find open-stock records
+    if (existingStock.length === 0) {
+      existingStock = await Stock.find({
+        date: currentDate,
+        status: "open-stock",
+      });
+    }
 
     res.status(200).json({ existingStock });
   } catch (err) {
