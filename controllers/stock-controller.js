@@ -112,11 +112,6 @@ export const updateOpenStock = async (req, res) => {
       pricePerUnit,
       location,
     } = req.body;
-    const { role } = req.user;
-
-    if (!["owner", "worker"].includes(role)) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
 
     // Find open-stock record with the same tyreSize and date
     let stock = await Stock.findOne({ date, tyreSize, status: "open-stock" });
