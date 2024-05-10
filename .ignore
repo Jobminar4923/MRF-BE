@@ -1,0 +1,24 @@
+# Ignore node_modules directory
+node_modules/
+
+# Ignore log files and build artifacts
+*.log
+*.zip
+*.tar.gz
+/build
+/dist
+
+# Ignore environment-specific files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Ignore IDE and editor files
+.vscode/
+.idea/
+
+# Ignore operating system files
+.DS_Store
+Thumbs.db
