@@ -91,7 +91,7 @@ export const addStock = async (req, res) => {
       .json({ message: "Failed to update stock", error: err.message });
   }
 };
-
+//updating the stock__________________________________________________
 export const updateOpenStock = async (req, res) => {
   try {
     const {
@@ -109,7 +109,7 @@ export const updateOpenStock = async (req, res) => {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    // Find open-stock record with the same tyreSize and date
+    // Find open-stock record with the same tyreSize and date_________________
     let stock = await Stock.findOne({ date, tyreSize, status: "open-stock" });
 
     if (!stock) {
@@ -154,7 +154,7 @@ export const updateOpenStock = async (req, res) => {
       .json({ message: "Failed to update stock", error: err.message });
   }
 };
-
+//record sale______________________________________
 export const recordSale = async (req, res) => {
   try {
     const {
@@ -335,6 +335,35 @@ export const getOpenStock = async (req, res) => {
           date: currentDate,
           status: "open-stock",
         });
+      } else {
+        // If there are no existing-stock records for the previous date, create from previous date "open-stock"
+        const previousOpenStock = await Stock.find({
+          date: previousDate.toISOString().split("T")[0],
+          status: "open-stock",
+        });
+
+        if (previousOpenStock.length > 0) {
+          // Create new open-stock records from previous open-stock records
+          for (const stock of previousOpenStock) {
+            const newStock = new Stock({
+              date: currentDate,
+              status: "open-stock",
+              quantity: stock.quantity,
+              tyreSize: stock.tyreSize,
+              SSP: stock.SSP,
+              totalAmount: stock.totalAmount,
+              pricePerUnit: stock.pricePerUnit,
+              location: stock.location,
+            });
+            await newStock.save();
+          }
+
+          // Retrieve the newly created open-stock records
+          openStock = await Stock.find({
+            date: currentDate,
+            status: "open-stock",
+          });
+        }
       }
     }
 
